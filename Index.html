@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emprendimiento Saul Taly - Oficial</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --rojo: #e63946; 
+            --negro: #1d3557; 
+            --blanco: #ffffff; 
+            --gris-claro: #f8f9fa;
+            --sombra: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: var(--gris-claro); 
+            margin: 0; 
+            padding: 0; 
+            color: #333;
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        /* PANEL ADMIN */
+        #admin-panel { display: none; background: #000; color: #fff; padding: 25px; border-bottom: 5px solid var(--rojo); z-index: 2000; }
+        .admin-in { width: 95%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; display: block; margin-bottom: 12px;}
+
+        /* HEADER */
+        header { 
+            padding: 30px 20px; 
+            text-align: center; 
+            background: white; 
+            box-shadow: 0 2px 15px rgba(0,0,0,0.03);
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+        }
+        .logo-btn { 
+            width: 90px; height: 90px; 
+            background: var(--negro); 
+            border-radius: 50%; 
+            margin: 0 auto 15px; 
+            border: 4px solid var(--rojo); 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(230, 57, 70, 0.3);
+        }
+        #logo-img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* CARRUSEL MODERNO */
+        .slider-container { 
+            width: 92%; margin: 20px auto; 
+            overflow: hidden; background: #fff; 
+            height: 220px; position: relative; 
+            border-radius: 25px;
+            box-shadow: var(--sombra);
+        }
+        .slider-track { display: flex; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); height: 100%; }
+        .slide { min-width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .slide img { height: 100%; width: 100%; object-fit: contain; padding: 10px; box-sizing: border-box; }
+        .slide-tag { 
+            position: absolute; bottom: 15px; 
+            background: rgba(230, 57, 70, 0.9); 
+            color: white; padding: 6px 20px; 
+            border-radius: 30px; font-size: 0.85rem; font-weight: 600;
+        }
+
+        /* BUSCADOR */
+        .search-container { padding: 15px 20px; display: flex; gap: 10px; max-width: 900px; margin: auto; }
+        #search-input { 
+            flex-grow: 1; padding: 15px 25px; 
+            border-radius: 30px; border: none; 
+            font-size: 1rem; box-shadow: var(--sombra);
+            outline: none; transition: 0.3s;
+        }
+        #search-input:focus { box-shadow: 0 5px 20px rgba(230, 57, 70, 0.15); }
+        #btn-back { 
+            display: none; background: var(--negro); color: white; border: none; 
+            padding: 0 20px; border-radius: 30px; cursor: pointer; font-weight: 600;
+        }
+
+        /* GRID Y TARJETAS */
+        .container { padding: 20px; max-width: 1000px; margin: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 20px; }
+        .card { 
+            border: none; border-radius: 20px; padding: 15px; 
+            text-align: center; background: white; 
+            box-shadow: var(--sombra);
+            transition: transform 0.3s ease;
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card img { 
+            width: 100%; height: 160px; object-fit: cover; 
+            border-radius: 15px; background: #fdfdfd; 
+            transition: 0.3s;
+        }
+        .card:hover img { transform: scale(1.05); }
+        .card-desc { font-size: 0.8rem; color: #777; margin: 10px 0; display: block; min-height: 35px; line-height: 1.2; }
+        
+        .price-bs { color: var(--rojo); font-weight: 700; font-size: 1.1rem; display: block; margin-top: 5px; }
+        .price-usd { color: #888; font-size: 0.85rem; }
+
+        .cant-label { font-size: 0.75rem; color: var(--negro); display: block; margin-top: 12px; font-weight: 600; }
+        .cant-input { 
+            width: 80px; display: block; margin: 8px auto; 
+            border: 2px solid #eee; border-radius: 10px; 
+            text-align: center; padding: 8px; font-weight: 600;
+            transition: 0.3s;
+        }
+        .cant-input:focus { border-color: var(--rojo); outline: none; }
+
+        .tasa-box { 
+            background: var(--negro); color: white; padding: 15px; 
+            border-radius: 20px; margin-bottom: 25px; 
+            text-align: center; font-weight: 600; letter-spacing: 1px;
+            box-shadow: 0 10px 20px rgba(29, 53, 87, 0.2);
+        }
+
+        .pago-box { 
+            background: #fff; border-radius: 20px; padding: 20px; 
+            margin-top: 40px; border-left: 6px solid var(--rojo);
+            box-shadow: var(--sombra);
+        }
+
+        /* FOOTER */
+        .footer { 
+            position: fixed; bottom: 0; width: 100%; 
+            background: white; color: var(--negro); 
+            padding: 20px 0; text-align: center; 
+            z-index: 1000; border-top: 1px solid #eee;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.05);
+        }
+        .btn-ws { 
+            background: linear-gradient(135deg, var(--rojo), #b91d2c); 
+            color: white; border: none; padding: 15px; 
+            border-radius: 35px; width: 85%; font-weight: 700; 
+            margin-top: 12px; cursor: pointer; 
+            box-shadow: 0 8px 20px rgba(230, 57, 70, 0.3);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        
+        table { width: 100%; color: white; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #333; padding: 10px; text-align: left; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div id="admin-panel">
+    <h3>⚙️ Panel Admin - Saul Taly</h3>
+    Tasa BCV: <input type="number" id="adm-tasa" class="admin-in" step="0.01">
+    RIF: <input type="text" id="adm-rif" class="admin-in">
+    Datos de Pago: <textarea id="adm-pago" class="admin-in" rows="2"></textarea>
+    Subir Logo: <input type="file" id="adm-logo-file" class="admin-in" accept="image/*">
+    <button onclick="saveGlobalConfig()" style="width:100%; padding:15px; background:var(--rojo); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Actualizar Sitio Global</button>
+    <hr style="border:0.5px solid #333; margin:20px 0;">
+    <h4 id="form-title">Agregar Producto</h4>
+    <input type="hidden" id="edit-id">
+    <input type="text" id="add-n" class="admin-in" placeholder="Nombre del Producto">
+    <input type="text" id="add-d" class="admin-in" placeholder="Descripción breve">
+    <input type="number" id="add-p" class="admin-in" placeholder="Precio $" step="0.01">
+    <input type="number" id="add-s" class="admin-in" placeholder="Stock disponible" step="0.01">
+    Foto: <input type="file" id="add-img-file" class="admin-in" accept="image/*">
+    <button id="btn-upload" onclick="uploadProd()" style="width:100%; padding:12px; margin-top:10px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">Guardar en la Nube</button>
+    <button id="btn-cancel" onclick="clearProdForm()" style="width:100%; padding:12px; margin-top:5px; background:#666; color:white; border:none; border-radius:8px; display:none;">Cancelar Edición</button>
+    
+    <table id="adm-table">
+        <thead><tr><th>Producto</th><th>Acciones</th></tr></thead>
+        <tbody id="adm-body"></tbody>
+    </table>
+    <button onclick="document.getElementById('admin-panel').style.display='none'" style="width:100%; margin-top:20px; padding:12px; border-radius:8px;">Cerrar Panel</button>
+</div>
+
+<header>
+    <div class="logo-btn" onmousedown="startHold()" onmouseup="endHold()" ontouchstart="startHold()" ontouchend="endHold()">
+        <img id="logo-img" src="" alt="ST" onerror="this.style.display='none'">
+        <span id="logo-txt" style="color:white; font-weight:bold; font-size:1.5rem;">ST</span>
+    </div>
+    <h2 style="margin:0; font-weight:600; color:var(--negro);">Emprendimiento Saul Taly</h2>
+    <small id="rif-view" style="color:var(--rojo); font-weight:600;"></small>
+    <p style="margin:5px 0 0; font-size:0.85rem; color:#666;">¡¡Productos naturales para tu salud!!</p>
+</header>
+
+<div class="slider-container" id="slider-box">
+    <div class="slider-track" id="slider-track"></div>
+</div>
+
+<div class="search-container">
+    <button id="btn-back" onclick="resetSearch()">✕</button>
+    <input type="text" id="search-input" placeholder="🔍 ¿Qué estás buscando hoy?" oninput="handleSearch(this.value)">
+</div>
+
+<div class="container">
+    <div class="tasa-box">
+        TASA DEL DÍA: <span id="tasa-view">0.00</span> Bs/$
+    </div>
+    
+    <div class="grid" id="main-grid"></div>
+    
+    <div class="pago-box">
+        <h4 style="margin:0 0 10px 0; color:var(--rojo); text-transform:uppercase; font-size:0.9rem;">Información de Pago</h4>
+        <div id="pago-view" style="white-space: pre-wrap; font-size:0.9rem; line-height:1.6; color:#444;"></div>
+    </div>
+    <div style="height: 180px;"></div>
+</div>
+
+<div class="footer">
+    <div style="font-weight:600; font-size:1.1rem;">
+        Total: <span style="color:var(--rojo);" id="total-usd">$0.00</span> | <span id="total-bs">0.00 Bs</span>
+    </div>
+    <button class="btn-ws" onclick="sendWS()">Finalizar Pedido por WhatsApp</button>
+</div>
+
+<script>
+    // --- LÓGICA DE PROGRAMACIÓN (MANTENIDA EXACTA) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDIGqHCquBiPPvdxDDpk5QFbPfemJ8OxhE",
+      authDomain: "emprendimientosaultaly.firebaseapp.com",
+      databaseURL: "https://emprendimientosaultaly-default-rtdb.firebaseio.com",
+      projectId: "emprendimientosaultaly",
+      storageBucket: "emprendimientosaultaly.firebasestorage.app",
+      messagingSenderId: "143582538940",
+      appId: "1:143582538940:web:095c5c107529343be934b9",
+      measurementId: "G-YE4EZ3GKY1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentConfig = {};
+    let currentItems = [];
+    let cart = {}; 
+    let holdTimer;
+    let slideIndex = 0;
+    const SECRET_KEY = "230363230203";
+
+    db.ref('config').on('value', (snapshot) => {
+        currentConfig = snapshot.val() || { tasa: 0, rif: "", pago: "", logo: "" };
+        document.getElementById('adm-tasa').value = currentConfig.tasa;
+        document.getElementById('adm-rif').value = currentConfig.rif;
+        document.getElementById('adm-pago').value = currentConfig.pago;
+        renderLocal();
+    });
+
+    db.ref('productos').on('value', (snapshot) => {
+        const data = snapshot.val();
+        currentItems = data ? Object.values(data) : [];
+        renderLocal();
+        initSlider();
+    });
+
+    function initSlider() {
+        const track = document.getElementById('slider-track');
+        track.innerHTML = "";
+        if(currentItems.length === 0) return;
+        currentItems.forEach(p => {
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+            slide.onclick = () => {
+                document.getElementById('search-input').value = p.n;
+                handleSearch(p.n);
+                window.scrollTo(0, document.querySelector('.search-container').offsetTop - 10);
+            };
+            slide.innerHTML = `<img src="${p.i || ''}"><div class="slide-tag">${p.n}</div>`;
+            track.appendChild(slide);
+        });
+    }
+
+    setInterval(() => {
+        if(currentItems.length <= 1) return;
+        slideIndex = (slideIndex + 1) % currentItems.length;
+        document.getElementById('slider-track').style.transform = `translateX(-${slideIndex * 100}%)`;
+    }, 4000);
+
+    function handleSearch(val) {
+        document.getElementById('btn-back').style.display = (val.length > 0) ? "block" : "none";
+        renderLocal();
+    }
+
+    function resetSearch() {
+        document.getElementById('search-input').value = "";
+        document.getElementById('btn-back').style.display = "none";
+        renderLocal();
+    }
+
+    function renderLocal() {
+        document.getElementById('tasa-view').innerText = (currentConfig.tasa || 0).toFixed(2);
+        document.getElementById('rif-view').innerText = "RIF: " + (currentConfig.rif || "");
+        document.getElementById('pago-view').innerText = currentConfig.pago || "";
+        
+        if(currentConfig.logo) {
+            document.getElementById('logo-img').src = currentConfig.logo;
+            document.getElementById('logo-img').style.display = 'block';
+            document.getElementById('logo-txt').style.display = 'none';
+        }
+
+        const term = document.getElementById('search-input').value.toLowerCase();
+        const grid = document.getElementById('main-grid');
+        grid.innerHTML = "";
+
+        currentItems.filter(p => p.n.toLowerCase().includes(term)).forEach(p => {
+            const cantGuardada = cart[p.id] ? cart[p.id].c : "";
+            grid.innerHTML += `
+                <div class="card">
+                    <img src="${p.i || ''}" onerror="this.src='https://via.placeholder.com/150'">
+                    <span style="display:block; font-weight:600; margin-top:10px; color:var(--negro);">${p.n}</span>
+                    <small class="card-desc">${p.d || ''}</small>
+                    <span class="price-bs">${(p.p * currentConfig.tasa).toFixed(2)} Bs</span>
+                    <span class="price-usd">$${p.p}</span>
+                    <label class="cant-label">¿Que cantidad en kg deseas?</label>
+                    <input type="number" step="any" min="0" value="${cantGuardada}" placeholder="0" oninput="updCart('${p.id}', this.value)" class="cant-input">
+                </div>`;
+        });
+
+        const tbody = document.getElementById('adm-body');
+        tbody.innerHTML = "";
+        currentItems.forEach(p => {
+            tbody.innerHTML += `<tr><td>${p.n}</td><td><button onclick="editProd('${p.id}')" style="color:#00e5ff; background:none; border:none; cursor:pointer;">Editar</button> <button onclick="deleteProd('${p.id}')" style="color:red; background:none; border:none; cursor:pointer; margin-left:10px;">X</button></td></tr>`;
+        });
+        updateTotals(); 
+    }
+
+    function updCart(id, c) {
+        const p = currentItems.find(x => x.id === id);
+        const cant = parseFloat(c);
+        if(cant > 0) cart[id] = { n: p.n, p: p.p, c: cant }; 
+        else delete cart[id];
+        updateTotals();
+    }
+
+    function updateTotals() {
+        let t = 0;
+        for(let k in cart) t += cart[k].p * cart[k].c;
+        document.getElementById('total-usd').innerText = `$${t.toFixed(2)}`;
+        document.getElementById('total-bs').innerText = `${(t * (currentConfig.tasa || 0)).toFixed(2)} Bs`;
+    }
+
+    function sendWS() {
+        if(Object.keys(cart).length === 0) return alert("Por favor, añade al menos un producto.");
+        let m = "*🛍️ NUEVO PEDIDO - EMPRENDIMIENTO SAUL TALY*%0A----------------------------------------------------%0A👤 _Hola, me gustaría concretar el siguiente pedido:_%0A%0A";
+        for(let k in cart) m += `*• ${cart[k].n}* x${cart[k].c}%0A`;
+        m += `%0A💵 *TOTAL USD:* ${document.getElementById('total-usd').innerText}%0A🇻🇪 *TOTAL BS:* ${document.getElementById('total-bs').innerText}%0A%0A💳 _¿Me podría confirmar la disponibilidad para realizar el pago?_`;
+        window.open(`https://wa.me/584126950652?text=${m}`);
+    }
+
+    function startHold() { holdTimer = setTimeout(() => { const p = prompt("Acceso Administrador:"); if(p===SECRET_KEY) document.getElementById('admin-panel').style.display='block'; }, 3000); }
+    function endHold() { clearTimeout(holdTimer); }
+
+    async function saveGlobalConfig() {
+        const file = document.getElementById('adm-logo-file').files[0];
+        let logo = currentConfig.logo || "";
+        if(file) logo = await toBase64(file);
+        db.ref('config').set({ 
+            tasa: parseFloat(document.getElementById('adm-tasa').value) || 0, 
+            rif: document.getElementById('adm-rif').value, 
+            pago: document.getElementById('adm-pago').value, 
+            logo: logo 
+        });
+        alert("Configuración Actualizada");
+    }
+
+    async function uploadProd() {
+        const id = document.getElementById('edit-id').value || db.ref().child('productos').push().key;
+        const file = document.getElementById('add-img-file').files[0];
+        let img = "";
+        const existing = currentItems.find(x => x.id === id);
+        if(file) img = await toBase64(file);
+        else img = existing ? existing.i : "";
+
+        db.ref('productos/' + id).set({ 
+            id, n: document.getElementById('add-n').value, d: document.getElementById('add-d').value, 
+            p: parseFloat(document.getElementById('add-p').value) || 0, 
+            s: parseFloat(document.getElementById('add-s').value) || 0, i: img 
+        });
+        alert("¡Producto Guardado!");
+        clearProdForm();
+    }
+
+    function editProd(id) {
+        const p = currentItems.find(x => x.id === id);
+        document.getElementById('edit-id').value = p.id;
+        document.getElementById('add-n').value = p.n;
+        document.getElementById('add-d').value = p.d || "";
+        document.getElementById('add-p').value = p.p;
+        document.getElementById('add-s').value = p.s;
+        document.getElementById('form-title').innerText = "Editando Producto";
+        document.getElementById('btn-cancel').style.display = "block";
+        window.scrollTo(0,0);
+    }
+
+    function clearProdForm() { 
+        document.getElementById('edit-id').value = ""; 
+        document.getElementById('add-n').value = ""; 
+        document.getElementById('add-d').value = ""; 
+        document.getElementById('add-p').value = ""; 
+        document.getElementById('add-s').value = ""; 
+        document.getElementById('form-title').innerText = "Agregar Producto";
+        document.getElementById('btn-cancel').style.display = "none"; 
+    }
+    
+    function deleteProd(id) { if(confirm("¿Seguro que deseas eliminarlo?")) db.ref('productos/' + id).remove(); }
+    const toBase64 = f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); });
+
+    window.onload = renderLocal;
+</script>
+</body>
+</html>
