@@ -182,6 +182,196 @@
         setTimeout(() => { window.scrollTo(0, 0); }, 100);
     });
 
+    // CORRECCIÓN: Carga los datos guardados en los inputs del Panel Admin al iniciar
+    db.ref('config').on('value', s => { 
+        currentConfig = s.val() || {tasa:1, rif:'', logo:'', pago:'', desc:''}; 
+        
+        // Poner datos en la vista pública
+        document.getElementById('tasa-view').innerText = parseFloat(currentConfig.tasa).toFixed(2);
+        document.getElementById('rif-view').innerText = "RIF: " + currentConfig.rif;
+        document.getElementById('view-pago').innerText = currentConfig.pago || "";
+        document.getElementById('view-desc').innerText = currentConfig.desc || "";
+
+        // Poner datos en los inputs del Panel Admin (Para que no salgan en blanco)
+        document.getElementById('adm-tasa').value = currentConfig.tasa || "";
+        document.getElementById('adm-rif').value = currentConfig.rif || "";
+        document.getElementById('adm-pago').value = currentConfig.pago || "";
+        document.getElementById('adm-desc').value = currentConfig.desc || "";
+        
+        const logoImg = document.getElementById('logo-img');
+        if(currentConfig.logo) { 
+            logoImg.src = currentConfig.logo; 
+            logoImg.style.display = 'block'; 
+            document.getElementById('logo-txt').style.display = 'none'; 
+        }
+        render(); 
+    });
+
+    db.ref('productos').on('value', s => { 
+        const data = s.val(); 
+        currentItems = data ? Object.values(data) : []; 
+        render(); 
+        initSlider(); 
+    });
+
+    function render() {
+        const busqueda = document.getElementById('busqueda').value.toLowerCase();
+        const grid = document.getElementById('main-grid');
+        grid.innerHTML = "";
+        currentItems.forEach(p => {
+            if (p.n.toLowerCase().includes(busqueda)) {
+                const isPeso = p.tipo === 'peso';
+                grid.innerHTML += `
+                    <div class="card" id="prod-${p.id}">
+                        <div class="img-wrap"><img src="${p.i || 'https://via.placeholder.com/150'}"></div>
+                        <h4 style="margin:10px 0 5px">${p.n}</h4>
+                        <p style="font-size:0.8rem; color:#777; margin:0;">${p.d || ''}</p>
+                        <span class="price-bs">${(p.p * currentConfig.tasa).toFixed(2)} Bs</span>
+                        <small style="color:grey;">$${p.p} / ${isPeso?'Kg':'Und'}</small>
+                        <label class="cant-label">${isPeso?'':'Cantidad deseada por unidad'} ${isPeso?'<small style=>Cant. en kg (Ej: medio kg colocar 0.5)</small>':''}</label>
+                        <input type="number" id="input-${p.id}" step="${isPeso?'0.001':'1'}" min="0" placeholder="0" 
+                            oninput="validateAndUpd('${p.id}', this.value, '${p.tipo}')" 
+                            class="admin-in" style="background:#fff; color:#000; border:1px solid #ddd; width:80%; margin:5px auto 15px;">
+                    </div>`;
+            }
+        });
+        updateCartUI();
+        const admBody = document.getElementById('adm-body'); admBody.innerHTML = "";
+        currentItems.forEach(p => { admBody.innerHTML += `<tr><td>${p.n}</td><td><button onclick="editProd('${p.id}')" style="color:cyan;background:none;border:none;">Edit</button> <button onclick="deleteProd('${p.id}')" style="color:red;background:none;border:none;">X</button></td></tr>`; });
+    }
+
+    function validateAndUpd(id, cant, tipo) {
+        let val = parseFloat(cant); if(isNaN(val)) val = 0;
+        if (tipo === 'unidad' && !Number.isInteger(val) && val > 0) { alert("⚠️ Error: Solo números enteros."); document.getElementById('input-' + id).value = Math.floor(val); val = Math.floor(val); }
+        const p = currentItems.find(x => x.id === id);
+        if(val > 0) cart[id] = { n: p.n, p: p.p, c: val, u: (p.tipo==='peso'?'Kg':'Und') }; else delete cart[id]; updateCartUI();
+    }
+
+    function updateCartUI() {
+        let total = 0, count = 0; const list = document.getElementById('cart-items-list'); list.innerHTML = "";
+        for(let id in cart) { let sub = cart[id].p * cart[id].c; total += sub; count++; list.innerHTML += `<div class="cart-item"><span>${cart[id].n} (x${cart[id].c} ${cart[id].u})</span><b>$${sub.toFixed(2)}</b></div>`; }
+        document.getElementById('cart-count').innerText = count;
+        document.getElementById('total-view').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('modal-total-usd').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('modal-total-bs').innerText = (total * currentConfig.tasa).toFixed(2) + " Bs";
+    }
+
+    function toggleCart(show) { document.getElementById('cart-modal').style.display = show ? 'block' : 'none'; }
+    function sendWS() {
+        if(Object.keys(cart).length === 0) return alert("El carrito está vacío.");
+        let m = "*🛍️ NUEVO PEDIDO - EMPRENDIMIENTO SAUL TALY*%0A%0A";
+        for(let id in cart) m += `• ${cart[id].n}: ${cart[id].c} ${cart[id].u} ($${(cart[id].p * cart[id].c).toFixed(2)})%0A`;
+        m += `%0A💰 *TOTAL USD:* ${document.getElementById('modal-total-usd').innerText}%0A🇻🇪 *TOTAL BS:* ${document.getElementById('modal-total-bs').innerText}`;
+        window.open(`https://wa.me/584126950652?text=${m}`);
+    }
+
+    function initSlider() {
+        const track = document.getElementById('slider-track'); track.innerHTML = "";
+        currentItems.forEach(p => { 
+            track.innerHTML += `<div class="slide" onclick="scrollToProduct('${p.id}')">
+                <img src="${p.i}">
+                <div class="slide-info"><b>${p.n}</b></div>
+            </div>`; 
+        });
+        startAutoSlide();
+    }
+
+    const area = document.getElementById('swipe-area');
+    area.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+    area.addEventListener('touchend', e => { let move = touchX - e.changedTouches[0].clientX; if(move > 50) moveSlide(1); else if(move < -50) moveSlide(-1); });
+
+    function moveSlide(dir) { clearInterval(autoSlide); slideIndex = (slideIndex + dir + currentItems.length) % currentItems.length; document.getElementById('slider-track').style.transform = `translateX(-${slideIndex * 100}%)`; startAutoSlide(); }
+    function startAutoSlide() { clearInterval(autoSlide); autoSlide = setInterval(() => { if(currentItems.length > 1) moveSlide(1); }, 4000); }
+    function startHold() { holdTimer = setTimeout(() => { if(prompt("Acceso Admin:")==="230363230203") document.getElementById('admin-panel').style.display='block'; }, 3000); }
+    function endHold() { clearTimeout(holdTimer); }
+    function scrollToProduct(id) { const el = document.getElementById('prod-' + id); if(el) { el.scrollIntoView({ behavior: 'smooth' }); el.style.background = "#fff3f3"; setTimeout(() => el.style.background = "#fff", 1500); } }
+
+    async function uploadProd() {
+        const id = document.getElementById('edit-id').value || db.ref().child('productos').push().key;
+        const file = document.getElementById('add-img-file').files[0];
+        let img = (currentItems.find(x=>x.id===id)||{}).i || "";
+        if(file) img = await toBase64(file);
+        db.ref('productos/' + id).set({ id, n: document.getElementById('add-n').value, d: document.getElementById('add-d').value, p: parseFloat(document.getElementById('add-p').value) || 0, tipo: document.getElementById('add-tipo').value, i: img });
+        alert("¡Guardado!"); clearForm();
+    }
+
+    function editProd(id) {
+        const p = currentItems.find(x => x.id === id);
+        document.getElementById('edit-id').value = p.id; document.getElementById('add-n').value = p.n;
+        document.getElementById('add-d').value = p.d || ""; document.getElementById('add-p').value = p.p;
+        document.getElementById('add-tipo').value = p.tipo; document.getElementById('form-title').innerText = "Editando Producto";
+        document.getElementById('btn-cancel').style.display = "block"; window.scrollTo(0,0);
+    }
+    function deleteProd(id) { if(confirm("¿Eliminar?")) db.ref('productos/' + id).remove(); }
+    function clearForm() { document.getElementById('edit-id').value = ""; document.getElementById('add-n').value = ""; document.getElementById('add-d').value = ""; document.getElementById('add-p').value = ""; document.getElementById('form-title').innerText = "Gestionar Producto"; document.getElementById('btn-cancel').style.display = "none"; }
+    async function saveGlobalConfig() {
+        const file = document.getElementById('adm-logo-file').files[0];
+        let logo = currentConfig.logo || ""; if(file) logo = await toBase64(file);
+        db.ref('config').set({ tasa: parseFloat(document.getElementById('adm-tasa').value) || 0, rif: document.getElementById('adm-rif').value, pago: document.getElementById('adm-pago').value, desc: document.getElementById('adm-desc').value, logo: logo });
+        alert("Configuración Actualizada");
+    }
+    const toBase64 = f => new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); });
+</script>
+</body>
+</html>
+    <div class="slider-track" id="slider-track"></div>
+    <button class="nav-btn next" onclick="moveSlide(1)">❯</button>
+</div>
+
+<div class="container">
+    <div style="background:var(--negro); color:white; padding:12px; border-radius:15px; text-align:center; margin-bottom:20px; font-weight:bold;">
+        TASA DEL DÍA: <span id="tasa-view">0.00</span> Bs/$
+    </div>
+    <div class="grid" id="main-grid"></div>
+    <div class="info-footer-box">
+        <h4>Datos de Pago</h4>
+        <p id="view-pago" style="white-space: pre-wrap; font-size: 0.9rem; color: #555;"></p>
+    </div>
+    <div class="info-footer-box">
+        <h4>Sobre Nosotros</h4>
+        <p id="view-desc" style="white-space: pre-wrap; font-size: 0.9rem; color: #555;"></p>
+    </div>
+</div>
+
+<div id="cart-modal">
+    <div class="cart-content">
+        <h3 style="margin-top:0;">🛒 Detalle del Pedido</h3>
+        <div id="cart-items-list"></div>
+        <hr style="border:0.5px solid #eee; margin:15px 0;">
+        <div style="text-align:right; font-weight:600;">
+            Total USD: <span id="modal-total-usd">$0.00</span><br>
+            Total Bs: <span id="modal-total-bs">0.00 Bs</span>
+        </div>
+        <button class="btn-ws" style="width:100%; margin-top:20px;" onclick="sendWS()">Enviar Pedido al WhatsApp</button>
+        <button onclick="toggleCart(false)" style="width:100%; margin-top:10px; background:none; border:none; color:grey; cursor:pointer;">Seguir Comprando</button>
+    </div>
+</div>
+
+<div class="footer">
+    <button class="btn-ws" onclick="toggleCart(true)">
+        Carrito (<span id="cart-count">0</span>) | <span id="total-view">$0.00</span>
+    </button>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDIGqHCquBiPPvdxDDpk5QFbPfemJ8OxhE",
+      authDomain: "emprendimientosaultaly.firebaseapp.com",
+      databaseURL: "https://emprendimientosaultaly-default-rtdb.firebaseio.com",
+      projectId: "emprendimientosaultaly",
+      storageBucket: "emprendimientosaultaly.firebasestorage.app",
+      messagingSenderId: "143582538940",
+      appId: "1:143582538940:web:095c5c107529343be934b9"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentConfig = {}, currentItems = [], cart = {}, slideIndex = 0, holdTimer, autoSlide, touchX = 0;
+
+    window.addEventListener('load', () => {
+        setTimeout(() => { window.scrollTo(0, 0); }, 100);
+    });
+
     db.ref('config').on('value', s => { 
         currentConfig = s.val() || {tasa:1, rif:'', logo:'', pago:'', desc:''}; 
         document.getElementById('tasa-view').innerText = parseFloat(currentConfig.tasa).toFixed(2);
