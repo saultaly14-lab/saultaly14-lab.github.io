@@ -229,7 +229,7 @@
                         <p style="font-size:0.8rem; color:#777; margin:0;">${p.d || ''}</p>
                         <span class="price-bs">${(p.p * (currentConfig.tasa || 1)).toFixed(2)} Bs</span>
                         <small style="color:grey;">$${p.p} / ${isPeso?'Kg':'Und'}</small>
-                        <label class="cant-label">${isPeso?'':'Cant. por unidad'} ${isPeso?'<small>Cant. en kg (Ej: Para medio kg colocar 0.5)</small>':''}</label>
+                        <label class="cant-label">${isPeso?'':'¿Qué cantidad desea?'} ${isPeso?'<small> ¿Qué cantidad desea?(Ej:medio kg colocar 0.5)</small>':''}</label>
                         <input type="number" id="input-${p.id}" step="${isPeso?'0.001':'1'}" min="0" placeholder="0" 
                             oninput="validateAndUpd('${p.id}', this.value, '${p.tipo}')" 
                             class="admin-in" style="background:#fff; color:#000; border:1px solid #ddd; width:80%; margin:5px auto 15px;">
